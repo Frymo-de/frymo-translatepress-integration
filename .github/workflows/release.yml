@@ -41,20 +41,11 @@ jobs:
 
     - name: Remove unnecessary files and folders
       run: |
-         rm package.json
-         rm package-lock.json
-         rm gulpfile.js
-         rm .gitignore
-         rm .gitattributes
-         rm inc/composer.json
-         rm inc/composer.lock
-         rm -rf .git
-         rm -rf .github
-         rm -rf .cursor
-         rm -rf .cursorignore
-         rm inc/elementor/assets/iconfont/prefix.css
-         rm -rf inc/elementor/assets/iconfont/svg
-         rm -rf inc/elementor/assets/style/scss
+        rm -f package.json package-lock.json gulpfile.js .gitignore .gitattributes \
+              inc/composer.json inc/composer.lock inc/elementor/assets/iconfont/prefix.css
+
+        rm -rf .git .github .cursor .cursorignore \
+              inc/elementor/assets/iconfont/svg inc/elementor/assets/style/scss
 
     - name: Move files to frymo-translatepress-integration folder
       run: |
@@ -76,8 +67,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_path: frymo-${{ env.PLUGIN_VERSION }}.zip
-        asset_name: frymo-${{ env.PLUGIN_VERSION }}.zip
+        asset_path: frymo-translatepress-integration-${{ env.PLUGIN_VERSION }}.zip
+        asset_name: frymo-translatepress-integration-${{ env.PLUGIN_VERSION }}.zip
         asset_content_type: application/zip
 
     - name: Send custom JSON data to Slack workflow
@@ -95,7 +86,7 @@ jobs:
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "Frymo Version ${{ env.PLUGIN_VERSION }} released",
+                  "text": "Frymo TranslatePress Integration Version ${{ env.PLUGIN_VERSION }} released",
                   "emoji": true
                 }
               },
@@ -150,7 +141,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Frymo Create Release* job failed. <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Details>"
+                  "text": "*Frymo TranslatePress Integration Create Release* job failed. <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Details>"
                 }
               }
             ]
