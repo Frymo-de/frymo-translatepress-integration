@@ -1,0 +1,160 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Extract strings
+      run: |
+        PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[^ ]+' frymo-translatepress-integration.php)
+        echo "PLUGIN_VERSION=$PLUGIN_VERSION" >> $GITHUB_ENV
+
+        RELEASE=$(cat release.md)
+        RELEASE="${RELEASE//'%'/'%25'}"
+        RELEASE="${RELEASE//$'\n'/'\n'}"
+        RELEASE="${RELEASE//$'\r'/'\\r'}"
+        RELEASE="${RELEASE//$'\\'/'\\'}"
+        RELEASE="${RELEASE//$'\\n'/'n'}"
+        RELEASE="${RELEASE//$'"'/'\"'}"
+        RELEASE="${RELEASE//$'####'/''}"
+        echo "RELEASE=$RELEASE" >> $GITHUB_ENV
+
+    - name: Create Release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.PLUGIN_VERSION }}
+        release_name: Release ${{ env.PLUGIN_VERSION }}
+        body_path: release.md
+        draft: false
+        prerelease: false
+
+    - name: Remove unnecessary files and folders
+      run: |
+         rm package.json
+         rm package-lock.json
+         rm gulpfile.js
+         rm .gitignore
+         rm .gitattributes
+         rm inc/composer.json
+         rm inc/composer.lock
+         rm -rf .git
+         rm -rf .github
+         rm -rf .cursor
+         rm -rf .cursorignore
+         rm inc/elementor/assets/iconfont/prefix.css
+         rm -rf inc/elementor/assets/iconfont/svg
+         rm -rf inc/elementor/assets/style/scss
+
+    - name: Move files to frymo-translatepress-integration folder
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir frymo-translatepress-integration
+        shopt -s extglob
+        mv -- !(frymo-translatepress-integration) frymo-translatepress-integration/
+
+    - name: Zip files
+      run: |
+        cd $GITHUB_WORKSPACE
+        zip -r frymo-translatepress-integration-${{ env.PLUGIN_VERSION }}.zip .
+        cp frymo-translatepress-integration/changelog.md .
+        rm -rf frymo-translatepress-integration
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: frymo-${{ env.PLUGIN_VERSION }}.zip
+        asset_name: frymo-${{ env.PLUGIN_VERSION }}.zip
+        asset_content_type: application/zip
+
+    - name: Send custom JSON data to Slack workflow
+      id: slack
+      uses: slackapi/slack-github-action@v1.23.0
+      with:
+        # For posting a rich message using Block Kit
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "divider"
+              },
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Frymo Version ${{ env.PLUGIN_VERSION }} released",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "${{ env.RELEASE }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "<https://github.com/frymo-de/frymo-translatepress-integration/blob/release/changelog.md | View full changelog>"
+                }
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "Download",
+                      "emoji": true
+                    },
+                    "value": "download",
+                    "url": "${{ steps.create-release.outputs.html_url }}"
+                  }
+                ]
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+
+  send-slack-message:
+    needs: create-release
+    if: ${{failure()}}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send Slack Message
+      uses: slackapi/slack-github-action@v1.23.0
+      with:
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Frymo Create Release* job failed. <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | Details>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
