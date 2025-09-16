@@ -1,1 +1,1 @@
-- Internal: Plugin Update Checker test.
+- Internal: Update filter hook name for search object args.
