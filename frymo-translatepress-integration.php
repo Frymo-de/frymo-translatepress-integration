@@ -149,7 +149,7 @@ function frymo_tpi_get_translated_object_id( $post_ids, $translation_locale ) {
 
 
 // JustIMMO: Include only posts with the same immobilie_language term as the <sprache> value.
-add_filter( 'frymo_xml_process_search_existing_object_args', 'frymo_tpi_search_existing_object_args', 10, 3 );
+add_filter( 'frymo/xml_process/search_existing_object_args', 'frymo_tpi_search_existing_object_args', 10, 3 );
 
 /**
  * Filters WP_Query arguments to include only posts with a matching immobilie_language term.
