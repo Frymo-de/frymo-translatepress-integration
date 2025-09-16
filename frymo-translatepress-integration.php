@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Frymo Translatepress Integration
  * Plugin URI: https://github.com/frymo-de/frymo-translatepress-integration
- * Version: 0.2.0
+ * Version: 0.3.0
  * Description: Adds seamless multilingual support to Frymo by integrating with TranslatePress.
  * Text Domain: frymo-tpi
  * Author: Stark Systems UG
@@ -24,10 +24,10 @@ function ftpi_redirect_based_on_locale() {
 	}
 
 	$current_post = get_queried_object();
-	error_log( "current_post ID\n" . print_r( $current_post->ID, true ) );
+	// error_log( "current_post ID\n" . print_r( $current_post->ID, true ) );
 
 	$replacement_post = frymo_tpi_get_translated_post( $current_post, $locale );
-	error_log( "replacement_post ID\n" . print_r( $replacement_post->ID, true ) . "\n" );
+	// error_log( "replacement_post ID\n" . print_r( $replacement_post->ID, true ) . "\n" );
 
 	if ( $replacement_post->ID !== $current_post->ID ) {
 		$permalink = get_the_permalink( $replacement_post );
@@ -40,25 +40,6 @@ function ftpi_redirect_based_on_locale() {
 
 
 
-
-// /**
-//  * Maybe use this filter to change language URL for switcher.
-//  */
-// add_filter( 'trp_pre_get_url_for_language', 'custom_trp_language_url', 10, 3 );
-// function custom_trp_language_url( $url, $language_code, $original_url ) {
-
-// 	error_log( "url\n" . print_r( $url, true ) );
-// 	error_log( "language_code\n" . print_r( $language_code, true ) );
-// 	error_log( "original_url\n" . print_r( $original_url, true ) . "\n" );
-
-//    //  // Example: custom URL for French version
-//    //  if ( $language_code === 'de' ) {
-//    //      return home_url( '/fr/custom-path/' );
-//    //  }
-
-//     // Return unmodified URL for other languages
-//     return $url;
-// }
 
 
 
@@ -167,91 +148,71 @@ function frymo_tpi_get_translated_object_id( $post_ids, $translation_locale ) {
 
 
 
+// JustIMMO: Include only posts with the same immobilie_language term as the <sprache> value.
+add_filter( 'frymo_xml_process_search_existing_object_args', 'frymo_tpi_search_existing_object_args', 10, 3 );
 
+/**
+ * Filters WP_Query arguments to include only posts with a matching immobilie_language term.
+ *
+ * This ensures that only posts assigned the same language (from <sprache> in the XML)
+ * are considered as matching during import or processing.
+ *
+ * @since 1.0.0
+ *
+ * @param array                $args       WP_Query arguments.
+ * @param \SimpleXMLElement    $immobilie  The <immobilie> node from the OpenImmo XML feed.
+ * @param array                $options    Optional additional data passed to the filter.
+ *
+ * @return array Modified WP_Query arguments with a tax_query constraint.
+ */
+function frymo_tpi_search_existing_object_args( $args, $immobilie, $options ) {
+	// Extract language from the XML node.
+	$object_lang = (string) $immobilie->verwaltung_techn->sprache;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-add_action( 'pre_get_posts', 'frymo_search_by_meta_field_in_admin' );
-function frymo_search_by_meta_field_in_admin( $query ) {
-	if (
-		is_admin() &&
-		$query->is_main_query() &&
-		$query->is_search() &&
-		isset( $query->query_vars['post_type'] ) &&
-		FRYMO_POST_TYPE === $query->query_vars['post_type']
-	) {
-		global $wpdb;
-
-		$search_term = $query->get( 's' );
-
-		if ( ! empty( $search_term ) ) {
-			// Clear default search so we only search by meta
-			$query->set( 's', '' );
-
-			$query->set( 'meta_query', array(
-				array(
-					'key'     => 'frymo_objektnr_extern',
-					'value'   => $search_term,
-					'compare' => 'LIKE',
-				),
-			) );
-		}
+	if ( empty( $object_lang ) ) {
+		return $args; // No language set; return unmodified args.
 	}
+
+	// Lookup the term by name in the immobilie_language taxonomy.
+	$term = get_term_by( 'name', $object_lang, 'immobilie_language' );
+
+	if ( ! $term || is_wp_error( $term ) ) {
+		return $args; // Term doesn't exist or error occurred.
+	}
+
+	// Initialize or extend the tax_query argument.
+	if ( empty( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
+		$args['tax_query'] = [];
+	}
+
+	// Add tax_query condition to include only posts with the matching language term.
+	$args['tax_query'][] = [
+		'taxonomy' => 'immobilie_language',
+		'field'    => 'term_id',
+		'terms'    => [ $term->term_id ],
+		'operator' => 'IN',
+	];
+
+	// Ensure relation is set if multiple tax_query conditions exist.
+	if ( count( $args['tax_query'] ) > 1 ) {
+		$args['tax_query']['relation'] = 'AND';
+	}
+
+	return $args;
 }
 
 
 
 
 
+require_once plugin_dir_path(__FILE__) . 'inc/vendor/autoload.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
+$updateChecker = PucFactory::buildUpdateChecker(
+    'https://github.com/Frymo-de/frymo-translatepress-integration/',
+    __FILE__,
+    'frymo-translatepress-integration'
+);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+$updateChecker->setBranch( 'main' );
+$updateChecker->getVcsApi()->enableReleaseAssets();
