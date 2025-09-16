@@ -1,4 +1,7 @@
-#### 0.3.0
+#### 0.3.2
+- Internal: Update filter hook name for search object args.
+
+#### 0.3.1
 - Internal: Plugin Update Checker test.
 
 #### 0.3.0
