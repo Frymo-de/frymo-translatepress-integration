@@ -1,1 +1,1 @@
-- Tweak: Deploy CI/CD.
+- Internal: Plugin Update Checker test.

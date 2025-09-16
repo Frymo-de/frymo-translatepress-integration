@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Frymo Translatepress Integration
  * Plugin URI: https://github.com/frymo-de/frymo-translatepress-integration
- * Version: 0.3.0
+ * Version: 0.3.1
  * Description: Adds seamless multilingual support to Frymo by integrating with TranslatePress.
  * Text Domain: frymo-tpi
  * Author: Stark Systems UG
