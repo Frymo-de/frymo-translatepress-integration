@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Frymo Translatepress Integration
  * Plugin URI: https://github.com/frymo-de/frymo-translatepress-integration
- * Version: 0.2.0
+ * Version: 0.3.0
  * Description: Adds seamless multilingual support to Frymo by integrating with TranslatePress.
  * Text Domain: frymo-tpi
  * Author: Stark Systems UG
@@ -166,37 +166,53 @@ add_filter( 'frymo_xml_process_search_existing_object_args', 'frymo_tpi_search_e
  * @return array Modified WP_Query arguments with a tax_query constraint.
  */
 function frymo_tpi_search_existing_object_args( $args, $immobilie, $options ) {
-    // Extract language from the XML node.
-    $object_lang = (string) $immobilie->verwaltung_techn->sprache;
+	// Extract language from the XML node.
+	$object_lang = (string) $immobilie->verwaltung_techn->sprache;
 
-    if ( empty( $object_lang ) ) {
-        return $args; // No language set; return unmodified args.
-    }
+	if ( empty( $object_lang ) ) {
+		return $args; // No language set; return unmodified args.
+	}
 
-    // Lookup the term by name in the immobilie_language taxonomy.
-    $term = get_term_by( 'name', $object_lang, 'immobilie_language' );
+	// Lookup the term by name in the immobilie_language taxonomy.
+	$term = get_term_by( 'name', $object_lang, 'immobilie_language' );
 
-    if ( ! $term || is_wp_error( $term ) ) {
-        return $args; // Term doesn't exist or error occurred.
-    }
+	if ( ! $term || is_wp_error( $term ) ) {
+		return $args; // Term doesn't exist or error occurred.
+	}
 
-    // Initialize or extend the tax_query argument.
-    if ( empty( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
-        $args['tax_query'] = [];
-    }
+	// Initialize or extend the tax_query argument.
+	if ( empty( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
+		$args['tax_query'] = [];
+	}
 
-    // Add tax_query condition to include only posts with the matching language term.
-    $args['tax_query'][] = [
-        'taxonomy' => 'immobilie_language',
-        'field'    => 'term_id',
-        'terms'    => [ $term->term_id ],
-        'operator' => 'IN',
-    ];
+	// Add tax_query condition to include only posts with the matching language term.
+	$args['tax_query'][] = [
+		'taxonomy' => 'immobilie_language',
+		'field'    => 'term_id',
+		'terms'    => [ $term->term_id ],
+		'operator' => 'IN',
+	];
 
-    // Ensure relation is set if multiple tax_query conditions exist.
-    if ( count( $args['tax_query'] ) > 1 ) {
-        $args['tax_query']['relation'] = 'AND';
-    }
+	// Ensure relation is set if multiple tax_query conditions exist.
+	if ( count( $args['tax_query'] ) > 1 ) {
+		$args['tax_query']['relation'] = 'AND';
+	}
 
-    return $args;
+	return $args;
 }
+
+
+
+
+
+require_once plugin_dir_path(__FILE__) . 'inc/vendor/autoload.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$updateChecker = PucFactory::buildUpdateChecker(
+    'https://github.com/Frymo-de/frymo-translatepress-integration/',
+    __FILE__,
+    'frymo-translatepress-integration'
+);
+
+$updateChecker->setBranch( 'main' );
+$updateChecker->getVcsApi()->enableReleaseAssets();
